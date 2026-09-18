@@ -27,7 +27,7 @@ body{
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
   background:#eef2f7;color:var(--ink);
   display:flex;flex-direction:column;align-items:center;
-  padding:20px 20px 24px;gap:14px;
+  padding:12px 18px 12px;gap:9px;
   -webkit-font-smoothing:antialiased;
 }
 
@@ -35,14 +35,14 @@ body{
 .ctrl{width:100%;max-width:1120px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
 .ctrl .seg{display:flex;background:#fff;border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px}
 .ctrl .seg button{
-  border:0;background:transparent;padding:7px 14px;border-radius:7px;
+  border:0;background:transparent;padding:6px 13px;border-radius:7px;
   font-size:13.5px;color:var(--ink3);cursor:pointer;font-family:inherit;white-space:nowrap;
   transition:background .15s,color .15s;
 }
 .ctrl .seg button.on{background:var(--blue-soft);color:var(--blue);font-weight:700}
 .ctrl .btn{
   border:1px solid #dbe3ec;background:#fff;color:var(--ink2);
-  padding:8px 15px;border-radius:10px;font-size:13.5px;font-weight:600;
+  padding:7px 14px;border-radius:10px;font-size:13.5px;font-weight:600;
   cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s;
 }
 .ctrl .btn:hover{border-color:var(--blue);color:var(--blue)}
@@ -66,7 +66,7 @@ body{
 /* ══════════ 应用窗口 ══════════ */
 .app{
   width:100%;max-width:1120px;
-  flex:1 1 0%;min-height:0;max-height:900px;  /* 撑满剩余高度，大屏封顶 900 */
+  flex:1 1 0%;min-height:0;   /* 撑满剩余高度。2026-09-19 取消 max-height 封顶：屏幕越高就该用越满 */
   background:var(--surface);border:1px solid var(--line);border-radius:16px;
   overflow:hidden;display:flex;flex-direction:column;
   box-shadow:0 12px 32px rgba(0,0,0,.06);
@@ -75,7 +75,7 @@ body{
 /* 顶栏 */
 .hd{
   flex:0 0 auto;background:#fff;border-bottom:1px solid var(--line);
-  padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px;
+  padding:11px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px;
 }
 .hd-l{display:flex;align-items:center;gap:9px;min-width:0}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex:0 0 8px}
@@ -110,7 +110,7 @@ body{
 .msgs{
   flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;
   display:flex;flex-direction:column;gap:20px;
-  padding:26px max(26px,calc((100% - 720px) / 2));
+  padding:20px max(26px,calc((100% - 720px) / 2));
 }
 .msgs::-webkit-scrollbar{width:8px}
 .msgs::-webkit-scrollbar-thumb{background:#dbe3ec;border-radius:4px}
@@ -202,7 +202,7 @@ body{
 /* 输入区 */
 .composer{
   flex:0 0 auto;background:#fff;border-top:1px solid var(--line);
-  padding:14px max(26px,calc((100% - 720px) / 2));
+  padding:11px max(26px,calc((100% - 720px) / 2));
   display:flex;align-items:center;gap:10px;
 }
 .composer input{
@@ -264,6 +264,25 @@ body{
   background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:8px 12px;
 }
 .wk .wk-done.show{display:block}
+
+/* ══════════════════════════════════════════════
+   电脑端「矮屏」补偿（2026-09-19 新增）
+   触发场景：笔记本 150% 缩放 —— 1920×1080 的屏在 CSS 里只有 ~720px 高，
+   或者浏览器没全屏、上下还挂着地址栏/书签栏/任务栏。
+   这种时候把外面的边距、控制条、输入框再压一压，把高度让给对话区。
+   只作用于电脑端（min-width:901px），手机布局不受影响。
+   ══════════════════════════════════════════════ */
+@media(max-height:780px) and (min-width:901px){
+  body{padding:8px 14px 8px;gap:6px}
+  .hd{padding:9px 16px}
+  .msgs{padding:14px max(20px,calc((100% - 720px) / 2))}
+  .composer{padding:8px max(20px,calc((100% - 720px) / 2))}
+  .composer input{height:38px}
+  .composer .send{height:38px;padding:0 20px}
+  .ctrl .seg button{padding:5px 11px;font-size:13px}
+  .ctrl .btn{padding:5px 12px;font-size:13px}
+  .foot{font-size:10.5px}
+}
 
 /* ══════════════════════════════════════════════
    手机端：同一份文件，切换成手机布局
