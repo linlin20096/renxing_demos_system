@@ -962,7 +962,11 @@ keyEl.addEventListener('pointerdown', e => {
   taps.push(now);
   if (taps.length >= 3){
     taps = [];
-    location.href = 'teacher.html';
+    /* 开【新标签】打开，不要把学生端这一页顶掉 ——
+       演示联动要求两端同时开着，原地跳转等于自己把演示条件毁了。
+       万一被弹出窗口拦截（返回 null），再退回当前页跳转，保证一定进得去。 */
+    const w = window.open('teacher.html', '_blank');
+    if (!w) location.href = 'teacher.html';
     return;
   }
   keyEl.classList.add('armed');

@@ -41,6 +41,11 @@ body{
   cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s;
 }
 .ctrl .btn:hover{border-color:var(--blue);color:var(--blue)}
+/* 回学生端：推到最右边，和演示按钮分开，免得录屏时误点 */
+.ctrl .back{
+  margin-left:auto;text-decoration:none;display:inline-flex;align-items:center;
+  border-style:dashed;color:var(--ink4);
+}
 .ctrl .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
 .ctrl .btn.primary:hover{background:var(--blue-dark);border-color:var(--blue-dark);color:#fff}
 
@@ -363,6 +368,9 @@ body{
 <div class="ctrl">
   <button class="btn primary" id="btnAll">⚡ 全部展开</button>
   <button class="btn" id="btnReplay">↺ 重播</button>
+  <!-- 回学生端。放在 .ctrl 里（应用窗口之外）——
+       录屏时这条会被裁掉，学生也看不到这个页面 -->
+  <a class="btn back" href="index.html">← 回学生端</a>
 </div>
 
 <div class="app">
