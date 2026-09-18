@@ -1,0 +1,911 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<!-- 公开仓库里这个文件是能被翻到的，只能尽量不被搜索引擎收录。
+     注意：不要用 robots.txt 干这事 —— robots.txt 本身是公开的，等于把路径印在公告栏上。 -->
+<meta name="robots" content="noindex,nofollow">
+<title>韧行导航台 · 教师端</title>
+<style>
+:root{
+  --ink:#0f172a;
+  --ink2:#334155;
+  --ink3:#64748b;
+  --ink4:#94a3b8;
+  --line:#e2e8f0;
+  --line-soft:#f1f5f9;
+  --surface:#f8fafc;
+  --blue:#2563eb;
+  --blue-dark:#1d4ed8;
+  --blue-soft:#eff6ff;
+  --blue-line:#bfdbfe;
+  --green:#10b981;
+  --amber:#d97706;
+  --red:#dc2626;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;height:100%;overflow:hidden}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Hiragino Sans GB","Microsoft YaHei",sans-serif;
+  background:#eef2f7;color:var(--ink);
+  display:flex;flex-direction:column;align-items:center;padding:20px 20px 24px;gap:14px;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ══════════ 演示控制条（在应用之外） ══════════ */
+.ctrl{width:100%;max-width:1180px;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.ctrl .btn{
+  border:1px solid #dbe3ec;background:#fff;color:var(--ink2);
+  padding:8px 15px;border-radius:10px;font-size:13.5px;font-weight:600;
+  cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s;
+}
+.ctrl .btn:hover{border-color:var(--blue);color:var(--blue)}
+.ctrl .btn.primary{background:var(--blue);border-color:var(--blue);color:#fff}
+.ctrl .btn.primary:hover{background:var(--blue-dark);border-color:var(--blue-dark);color:#fff}
+
+/* ══════════ 应用窗口 ══════════ */
+.app{
+  width:100%;max-width:1180px;flex:1 1 0%;min-height:0;max-height:920px;
+  background:var(--surface);border:1px solid var(--line);border-radius:16px;
+  overflow:hidden;display:flex;flex-direction:column;
+  box-shadow:0 12px 32px rgba(0,0,0,.06);
+}
+
+.hd{
+  flex:0 0 auto;background:#fff;border-bottom:1px solid var(--line);
+  padding:14px 20px;display:flex;align-items:center;justify-content:space-between;gap:14px;
+}
+.hd-l{display:flex;align-items:center;gap:9px;min-width:0}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--green);flex:0 0 8px}
+.hd .name{font-size:16px;font-weight:700;white-space:nowrap}
+.hd .tag{
+  font-size:11px;font-weight:600;background:var(--blue-soft);color:var(--blue);
+  border:1px solid var(--blue-line);padding:2px 8px;border-radius:4px;white-space:nowrap;
+}
+.hd .sid{font-size:12.5px;color:var(--ink4);white-space:nowrap}
+
+/* 快捷指令 */
+.quick{
+  flex:0 0 auto;display:flex;gap:8px;overflow-x:auto;
+  padding:11px 20px;background:#fff;border-bottom:1px solid var(--line);
+}
+.quick::-webkit-scrollbar{height:0}
+.quick .chip{
+  flex:0 0 auto;border:1px solid var(--blue-line);background:var(--blue-soft);color:var(--blue);
+  padding:7px 15px;border-radius:999px;font-size:13.5px;font-weight:600;
+  cursor:pointer;font-family:inherit;white-space:nowrap;transition:all .15s;
+}
+.quick .chip:hover{background:var(--blue);border-color:var(--blue);color:#fff}
+.quick .chip.used{background:#f8fafc;border-color:var(--line);border-style:dashed;color:var(--ink4);font-weight:500}
+
+/* ══════════ 演示实时小条 ══════════
+   静态节点，放在 .app 里、.msgs 之外 —— 不能放进消息流，
+   否则点「↺ 重播」或「⚡ 全部展开」时 msgsEl.innerHTML='' 会把它清掉。
+   高度固定预留，避免有数据时整屏内容往上跳。 */
+.live{
+  flex:0 0 auto;display:flex;align-items:center;gap:9px;min-height:38px;
+  padding:8px 20px;background:#f8fafc;border-bottom:1px solid var(--line);
+  font-size:13px;color:var(--ink3);
+}
+.live .lvdot{width:7px;height:7px;border-radius:50%;background:var(--ink4);flex:0 0 7px;transition:background .2s}
+.live b{color:var(--ink2);white-space:nowrap}
+.live .lvtxt{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.live .lvtxt b{color:inherit}
+.live.on{background:#f0fdf4;border-bottom-color:#bbf7d0;color:#15803d}
+.live.on .lvdot{background:#22c55e;box-shadow:0 0 0 3px rgba(34,197,94,.18)}
+.live.on b{color:#15803d}
+
+/* 消息流 */
+.msgs{
+  flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;
+  display:flex;flex-direction:column;gap:20px;padding:24px 20px 30px;
+}
+.msgs::-webkit-scrollbar{width:8px}
+.msgs::-webkit-scrollbar-thumb{background:#dbe3ec;border-radius:4px}
+
+.mrow{display:flex;width:100%;align-items:flex-start}
+.mrow.cmd{flex-direction:row-reverse}
+.avatar{
+  width:38px;height:38px;flex:0 0 38px;border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:14px;font-weight:700;background:var(--blue-soft);color:var(--blue);
+  object-fit:cover;overflow:hidden;   /* 换 <img> 后：不加就会把头像压扁，透明 PNG 圆角也会裁不掉 */
+}
+.avatar.av-me{background:var(--line-soft);color:var(--ink3)}
+.mwrap{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:9px}
+.mrow.ai .mwrap{align-items:flex-start;margin-left:14px}
+.mrow.cmd .mwrap{align-items:flex-end;margin-right:12px}
+.sname{font-size:13px;color:var(--ink3);font-weight:500}
+.mrow.cmd .sname{text-align:right}
+
+.bubble{
+  width:fit-content;max-width:70%;padding:11px 15px;border-radius:10px;
+  font-size:14.5px;line-height:1.6;word-break:break-word;
+}
+.mrow.cmd .bubble{background:var(--blue);color:#fff;border-top-right-radius:2px;box-shadow:0 2px 8px rgba(37,99,235,.15)}
+
+/* 数据卡 */
+.card{
+  width:100%;background:#fff;border:1px solid var(--line);border-radius:12px;
+  box-shadow:0 2px 8px rgba(0,0,0,.04);overflow:hidden;
+  animation:cardIn .35s cubic-bezier(.2,.7,.3,1);
+}
+@keyframes cardIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.card-h{
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+  padding:14px 18px;border-bottom:1px solid var(--line-soft);background:#fbfcfe;
+}
+.card-h .t{font-size:15px;font-weight:700}
+.card-h .b{
+  font-size:11.5px;font-weight:600;color:var(--ink3);
+  background:var(--line-soft);border-radius:5px;padding:2px 9px;
+}
+.card-b{padding:18px}
+
+/* KPI */
+.kpis{display:flex;flex-wrap:wrap;gap:14px}
+.kpi{
+  flex:1 1 150px;min-width:140px;background:#fbfcfe;
+  border:1px solid var(--line-soft);border-radius:10px;padding:13px 15px;
+}
+.kpi .n{font-size:27px;font-weight:800;color:var(--blue);line-height:1.15;font-variant-numeric:tabular-nums}
+.kpi .n small{font-size:14px;font-weight:700;margin-left:2px}
+.kpi .l{font-size:12.5px;color:var(--ink3);margin-top:5px;line-height:1.45}
+
+/* 词云 */
+.cloud{display:flex;flex-wrap:wrap;gap:10px 20px;justify-content:center;align-items:baseline;padding:8px 0 4px}
+.cloud span{font-weight:700;color:var(--blue);line-height:1}
+.cloud span:nth-child(3n){color:#3b82f6}
+.cloud span:nth-child(4n){color:#1d4ed8}
+
+/* 条形 */
+.bars{display:flex;flex-direction:column;gap:13px}
+.bar{display:flex;align-items:center;gap:13px}
+.bar .lb{flex:0 0 200px;font-size:13.5px;color:var(--ink2);line-height:1.4}
+.bar .track{flex:1;min-width:50px;height:11px;background:#eef2f7;border-radius:6px;overflow:hidden}
+.bar .fill{height:100%;width:0;border-radius:6px;background:linear-gradient(90deg,var(--blue),#60a5fa);transition:width .9s cubic-bezier(.2,.7,.3,1)}
+.bar .fill.ok{background:linear-gradient(90deg,#059669,#34d399)}
+.bar .fill.warn{background:linear-gradient(90deg,#d97706,#fbbf24)}
+.bar .val{flex:0 0 62px;text-align:right;font-size:14px;font-weight:750;font-variant-numeric:tabular-nums}
+
+/* 前后对比 */
+.cmps{display:flex;flex-direction:column;gap:12px}
+.cmp{display:flex;align-items:center;gap:12px;background:#fbfcfe;border:1px solid var(--line-soft);border-radius:10px;padding:13px 15px;flex-wrap:wrap}
+.cmp .lb{flex:0 0 190px;font-size:13.5px;color:var(--ink2)}
+.cmp .from{font-size:15px;font-weight:700;color:var(--ink3);font-variant-numeric:tabular-nums}
+.cmp .arw{color:var(--blue);font-weight:800}
+.cmp .to{font-size:17px;font-weight:800;color:var(--blue);font-variant-numeric:tabular-nums}
+
+/* 前后双栏 */
+.vs{display:flex;align-items:stretch;gap:13px;flex-wrap:wrap}
+.vs .side{flex:1 1 220px;background:#fbfcfe;border:1px solid var(--line-soft);border-radius:10px;padding:15px}
+.vs .side.b{background:#f0fdf4;border-color:#bbf7d0}
+.vs .side .t{font-size:12.5px;color:var(--ink3);margin-bottom:7px}
+.vs .side .n{font-size:28px;font-weight:800;color:var(--ink);font-variant-numeric:tabular-nums;line-height:1.15}
+.vs .side.b .n{color:#059669}
+.vs .side .d{font-size:13px;color:var(--ink2);margin-top:7px;line-height:1.55}
+
+/* 标签 */
+.tags{display:flex;flex-wrap:wrap;gap:9px}
+.tag2{
+  background:var(--blue-soft);border:1px solid var(--blue-line);color:var(--blue);
+  border-radius:9px;padding:8px 14px;font-size:13.5px;font-weight:600;
+}
+.tag2.g{background:#f0fdf4;border-color:#bbf7d0;color:#059669}
+
+/* 名单 */
+.list{display:flex;flex-direction:column}
+.list .it{display:flex;align-items:center;gap:13px;padding:12px 0;border-bottom:1px dashed var(--line)}
+.list .it:last-child{border-bottom:0;padding-bottom:0}
+.list .it:first-child{padding-top:0}
+.bdg{flex:0 0 auto;padding:4px 11px;border-radius:7px;font-size:12.5px;font-weight:700}
+.bdg.high{background:#fef2f2;color:var(--red);border:1px solid #fecaca}
+.bdg.mid{background:#fffbeb;color:var(--amber);border:1px solid #fde68a}
+.bdg.low{background:var(--blue-soft);color:var(--blue);border:1px solid var(--blue-line)}
+.list .who{flex:0 0 84px;font-size:14px;font-weight:700}
+.list .why{flex:1;font-size:13.5px;color:var(--ink2);line-height:1.5}
+.list .act{flex:0 0 auto;font-size:13px;color:var(--blue);font-weight:650}
+
+/* 结论 */
+.note{
+  margin-top:16px;padding:13px 15px;background:var(--blue-soft);
+  border-left:3px solid var(--blue);border-radius:0 9px 9px 0;
+  font-size:13.5px;line-height:1.7;color:var(--ink2);
+}
+.note:first-child{margin-top:0}
+.note b{color:var(--blue)}
+.note.warn{background:#fffbeb;border-left-color:var(--amber)}
+.note.warn b{color:var(--amber)}
+.note.ok{background:#f0fdf4;border-left-color:var(--green)}
+.note.ok b{color:#059669}
+
+/* 完成天数分布 */
+.dist{display:flex;flex-direction:column;gap:11px}
+.dist .sub{font-size:13px;font-weight:700;color:var(--ink3);letter-spacing:.4px;margin-bottom:2px}
+.dist .drow{display:flex;align-items:center;gap:13px}
+.dist .drow .lb{flex:0 0 92px;font-size:13.5px;color:var(--ink2)}
+.dist .drow .track{flex:1;min-width:50px;height:11px;background:#eef2f7;border-radius:6px;overflow:hidden}
+.dist .drow .fill{height:100%;width:0;border-radius:6px;background:linear-gradient(90deg,var(--blue),#60a5fa);transition:width .9s cubic-bezier(.2,.7,.3,1)}
+.dist .drow .val{flex:0 0 124px;text-align:right;font-size:13.5px;font-weight:700;color:var(--ink2);font-variant-numeric:tabular-nums}
+
+/* 七日情绪天气变化 */
+.trend .sub{font-size:13px;font-weight:700;color:var(--ink3);letter-spacing:.4px;margin-bottom:11px}
+.trend .trow{display:flex;gap:9px}
+.trend .tcol{
+  flex:1;min-width:0;background:#fbfcfe;border:1px solid var(--line-soft);
+  border-radius:10px;padding:11px 4px 9px;
+  display:flex;flex-direction:column;align-items:center;gap:4px;
+}
+.trend .tcol .em2{font-size:23px;line-height:1}
+.trend .tcol .tt{font-size:11.5px;color:var(--ink3);white-space:nowrap}
+.trend .tcol .td{font-size:11px;color:var(--ink4);white-space:nowrap}
+.trend .tnote{margin-top:11px;font-size:13px;line-height:1.65;color:var(--ink2)}
+
+/* 学生原话 */
+.quotes{display:flex;flex-direction:column;gap:11px}
+.quotes .quote{
+  background:#fbfcfe;border:1px solid var(--line-soft);
+  border-left:3px solid var(--blue-line);border-radius:0 10px 10px 0;padding:12px 15px;
+}
+.quotes .qt{font-size:13.5px;line-height:1.7;color:var(--ink2)}
+.quotes .qw{margin-top:6px;font-size:12px;color:var(--ink4)}
+
+/* 交叉分析表：用来证明「天数多 ≠ 学得好」 */
+.mx{display:flex;flex-direction:column}
+.mx .sub{font-size:13px;font-weight:700;color:var(--ink3);letter-spacing:.4px;margin-bottom:4px}
+.mx .mxrow{display:flex;align-items:stretch;gap:8px;margin-top:8px}
+.mx .mxh{
+  flex:0 0 118px;display:flex;align-items:center;font-size:12.5px;
+  color:var(--ink3);line-height:1.35;
+}
+.mx .mxc{
+  flex:1;min-width:0;border-radius:9px;padding:9px 6px;text-align:center;
+  background:#f1f5f9;border:1px solid var(--line);
+}
+.mx .mxc b{display:block;font-size:19px;font-weight:800;line-height:1.15;color:var(--ink2);font-variant-numeric:tabular-nums}
+.mx .mxc em{display:block;font-style:normal;font-size:11.5px;color:var(--ink4);margin-top:2px}
+.mx .mxc.hi{background:#ecfdf5;border-color:#a7f3d0}
+.mx .mxc.hi b{color:#15803d}
+.mx .mxc.lo{background:#fff7ed;border-color:#fed7aa}
+.mx .mxc.lo b{color:#c2410c}
+.mx .mxhd .mxc{background:transparent;border-color:transparent;padding:0 6px}
+.mx .mxhd .mxc em{margin-top:0;font-size:11.5px;font-weight:700;color:var(--ink3)}
+
+/* 输入区 */
+.composer{
+  flex:0 0 auto;background:#fff;border-top:1px solid var(--line);
+  padding:14px 20px;display:flex;align-items:center;gap:10px;
+}
+.composer input{
+  flex:1;min-width:0;height:44px;border:1px solid var(--line);border-radius:10px;
+  padding:0 15px;font-size:14.5px;font-family:inherit;color:var(--ink);
+  background:#fbfcfe;outline:none;transition:border-color .15s,box-shadow .15s,background .15s;
+}
+.composer input:focus{border-color:var(--blue-line);background:#fff;box-shadow:0 0 0 3px rgba(37,99,235,.1)}
+.composer input::placeholder{color:var(--ink4)}
+.composer .send{
+  flex:0 0 auto;height:44px;padding:0 24px;border:0;border-radius:10px;cursor:pointer;
+  background:var(--blue);color:#fff;font-size:14.5px;font-weight:600;font-family:inherit;
+  box-shadow:0 2px 8px rgba(37,99,235,.2);transition:background .15s;
+}
+.composer .send:hover{background:var(--blue-dark)}
+
+/* ══════════ 手机端 ══════════ */
+@media(max-width:900px){
+  body{display:flex;flex-direction:column;align-items:stretch;height:100dvh;min-height:0;overflow:hidden;padding:0;gap:0;background:var(--surface)}
+  .ctrl{flex:0 0 auto;max-width:none;width:100%;padding:7px 10px;gap:7px;background:#e9eef5;border-bottom:1px solid #dbe3ec}
+  .ctrl .btn{padding:6px 12px;font-size:12.5px}
+  .app{flex:1 1 0%;min-height:0;height:auto;max-height:none;max-width:none;width:100%;border:0;border-radius:0;box-shadow:none}
+  .hd{background:#eef4ff;border-bottom-color:#e3ecfb;padding:13px 15px}
+  .hd .sid{display:none}
+  .quick{padding:9px 12px;gap:7px}
+  .quick .chip{padding:6px 12px;font-size:12.5px}
+  .msgs{padding:16px 13px 22px;gap:16px}
+  .msgs::-webkit-scrollbar{width:0}
+  .mwrap{margin-left:9px !important;margin-right:9px !important}
+  .bubble{font-size:15px;max-width:82%}
+  .sname{display:none}
+  .card-b{padding:14px 13px}
+  .kpis{gap:10px}
+  .kpi{flex:1 1 130px;min-width:120px;padding:11px 12px}
+  .kpi .n{font-size:23px}
+  .bar{flex-wrap:wrap;gap:7px}
+  .bar .lb{flex:1 1 100%;font-size:13px}
+  .cmp{gap:9px;padding:11px 12px}
+  .cmp .lb{flex:1 1 100%}
+  .list .it{flex-wrap:wrap}
+  .list .why{flex:1 1 100%;order:3}
+  .dist .drow{flex-wrap:wrap;gap:6px 10px}
+  .dist .drow .lb{flex:1 1 auto}
+  .dist .drow .track{flex:1 1 100%;order:3}
+  .dist .drow .val{flex:0 0 auto}
+  .mx .mxrow{flex-wrap:wrap}
+  .mx .mxh{flex:1 1 100%}
+  .mx .mxc{padding:8px 4px}
+  .mx .mxc b{font-size:17px}
+  .mx .mxhd .mxh{display:none}
+  .trend .trow{gap:5px}
+  .trend .tcol{padding:9px 2px 7px;border-radius:8px;gap:3px}
+  .trend .tcol .em2{font-size:17px}
+  .trend .tcol .tt{display:none}
+  .trend .tcol .td{font-size:10px}
+  .composer{padding:10px 12px calc(env(safe-area-inset-bottom,0px) + 10px);gap:8px}
+  /* 必须 ≥16px：iOS Safari 对 font-size<16px 的输入框，聚焦时会自动放大整页 */
+  .composer input{height:42px;font-size:16px}
+  .live{padding:8px 12px;font-size:12.5px;gap:7px}
+  .composer .send{height:42px;padding:0 18px;font-size:15px}
+}
+</style>
+</head>
+<body>
+
+<div class="ctrl">
+  <button class="btn primary" id="btnAll">⚡ 全部展开</button>
+  <button class="btn" id="btnReplay">↺ 重播</button>
+</div>
+
+<div class="app">
+
+  <header class="hd">
+    <div class="hd-l">
+      <span class="dot"></span>
+      <span class="name">韧行导航台</span>
+      <span class="tag">教师端</span>
+    </div>
+    <span class="sid">25级室内艺术设计（2）班 · 34 人</span>
+  </header>
+
+  <div class="quick" id="quick"></div>
+
+  <!-- 演示实时：读学生端写进浏览器本地存储的那条记录。静态节点，不随消息流被清掉 -->
+  <div class="live" id="live">
+    <span class="lvdot"></span><b>演示实时</b>
+    <span class="lvtxt" id="liveTxt">等待学生端提交打卡…</span>
+  </div>
+
+  <div class="msgs" id="msgs"></div>
+
+  <div class="composer">
+    <input id="inp" type="text" placeholder="输入指令，例如：生成本班情绪画像" autocomplete="off">
+    <button class="send" id="send">发送</button>
+  </div>
+
+</div>
+
+<script>
+/* ══════════════════════════════════════════════════════════
+   指令库 —— 数值全部取自《教案1 情绪管理上》与《录课脚本》
+   ══════════════════════════════════════════════════════════ */
+const CMDS = [
+
+  /* 课前 · 对应脚本 P11 */
+  { key:'portrait', label:'生成本班情绪画像', keys:['画像','词云','情绪','课前'],
+    card:{
+      title:'班级情绪画像', badge:'课前 · 34 人 · 来源：改稿情绪日记',
+      kpis:[
+        {v:82.25, dec:2, u:'%', label:'预习完成率'},
+        {v:65.6,  dec:1, u:'%', label:'面对甲方否定易焦虑'},
+        {v:62.5,  dec:1, u:'%', label:'伴睡眠问题'},
+        {v:43.8,  dec:1, u:'%', label:'对核心概念 / 调节技术陌生'}
+      ],
+      cloud:[['焦虑',1.5],['内耗',1.28],['暴躁',1.18],['睡不着',1.08],['赶图',0.98],
+             ['被否定',0.95],['委屈',0.9],['疲惫',0.88],['改稿',0.84],['无力',0.82]],
+      note:'<b>教学调整：</b>6 名未完成预习的同学优先纳入分组补弱；重难点讲解从「情绪躯体化」切入，先建立「情绪—身体」连接再讲 ABC 理论。'
+    }
+  },
+
+  /* 润心 · 对应脚本 P15 / P19 */
+  { key:'depth', label:'查看冰山探索深度', keys:['冰山','深度','渴望','追问'],
+    card:{
+      title:'冰山探索深度', badge:'润心环节 · 34 人 · AI 追问记录',
+      kpis:[{v:7.2, dec:1, u:'轮', label:'平均对话轮次'}],
+      bars:[
+        {label:'挖掘到「渴望层」', v:78.6, tone:'ok'},
+        {label:'停留在表层抱怨', v:21.4, tone:'warn'}
+      ],
+      note:'<b>已自动触发二次推送：</b>7 名停留在表层的同学，系统推送了「同伴冰山图谱」范例 + 分层情绪词汇菜单，降低表达门槛。'
+    }
+  },
+
+  /* 砺心 · 对应脚本 P16 / P19 */
+  { key:'body', label:'调出躯体地图聚类', keys:['躯体','地图','聚类','肩颈','部位'],
+    card:{
+      title:'躯体地图聚类', badge:'砺心环节 · 34 人 · 红橙标记部位汇总',
+      kpis:[
+        {v:91.2, dec:1, u:'%', label:'能精准标注压力聚集部位'},
+        {v:31,   dec:0, u:' 人', label:'完成个人躯体地图'}
+      ],
+      tags:[['肩颈', 1],['眉心', 1],['手腕', 0]],
+      note:'<b>班级共性：</b>压力标记集中在肩颈与眉心 → 下次课优先训练「肩膀一紧，先摸摸它」的条件反射。'
+    }
+  },
+
+  /* 守心 · 对应脚本 P19 / P24 */
+  { key:'progress', label:'查看关键指标达成', keys:['达成','指标','达标','成效','数据'],
+    card:{
+      title:'关键指标达成情况', badge:'课中 + 课后 · 34 人',
+      cmps:[
+        {label:'ABC 模型准确填写', from:'课前 43.8%', to:'课后 89.3%'},
+        {label:'情境体验「非常真实」', from:'—', to:'95.2%'}
+      ],
+      bars:[
+        {label:'T字暂停 + 蝴蝶拍「最有收获」', v:91.7, tone:'ok'},
+        {label:'课堂讨论参与率', v:95.0, tone:'ok'},
+        {label:'躯体地图完成率', v:91.2, tone:'ok'},
+        {label:'课堂整体满意度', v:94.1, tone:'ok'}
+      ],
+      note:'全班指标全部达标，无小组触发补充微任务。'
+    }
+  },
+
+  /* 课后 · 对应脚本 P21 */
+  { key:'warning', label:'查看风险预警名单', keys:['预警','风险','名单','未打卡'],
+    card:{
+      title:'风险预警名单', badge:'系统自动标记 · 已匿名化，仅任课教师可见',
+      list:[
+        {lvl:'high', who:'L 同学', why:'情绪强度持续偏高，连续 3 次打卡记录负面情绪峰值', act:'建议一对一访谈'},
+        {lvl:'mid',  who:'B 同学', why:'连续 2 天未打卡，预习任务未完成', act:'建议私下关心'},
+        {lvl:'low',  who:'M 同学', why:'AI 追问停留在表层，未进入冰山深层探索', act:'建议推送情绪词汇菜单'}
+      ],
+      note:'<b>复核建议：</b>预警仅作为线索，需教师人工复核后个别辅导，不直接计入过程性评价。',
+      noteCls:'warn'
+    }
+  },
+
+  /* 课后固心 · 七日打卡 · 对应脚本 P20 / P21 / P24 */
+  { key:'checkin', label:'查看七日打卡数据', keys:['打卡','七日','7日','坚持','习惯','周报','情绪捕手'],
+    card:{
+      title:'情绪捕手 · 七日打卡', badge:'课后固心 · 34 人 · 对话式提交',
+      vs:[
+        {t:'首日 · 第 1 天', n:'88.2%', d:'30 / 34 人完成打卡'},
+        {t:'第 7 天', n:'79.4%', d:'27 / 34 人仍在坚持', b:1}
+      ],
+      dist:{
+        title:'完成天数分布（共 34 人）',
+        rows:[
+          {label:'满 7 天', n:27, p:79.4},
+          {label:'5–6 天',  n:4,  p:11.8},
+          {label:'3–4 天',  n:2,  p:5.9},
+          {label:'1–2 天',  n:1,  p:2.9}
+        ]
+      },
+      trend:{
+        title:'七日情绪天气变化（全班每日主导天气）',
+        days:[
+          ['第1天','⛈️','雷暴'],
+          ['第2天','🌧️','雨'],
+          ['第3天','⛅️','多云'],
+          ['第4天','⛅️','多云'],
+          ['第5天','⛅️','多云'],
+          ['第6天','☀️','晴'],
+          ['第7天','☀️','晴']
+        ],
+        note:'负面强度逐日回落，第 6 天起主导天气转为「晴」——与「T字暂停」在真实场景中的使用率（73.5%）同向变化。'
+      },
+      quotes:[
+        ['以前一生气就是闷着，现在知道先摸摸肩膀——肩膀一紧，先摸摸它。','第 3 天 · 匿名'],
+        ['改第四版的时候我按了 T 字暂停，跟甲方说“我先想一想”，居然没吵起来。','第 5 天 · 匿名'],
+        ['原来我想要的是“被看见”，不是“吵赢他”。','第 7 天 · 匿名']
+      ],
+      cloud:[
+        ['胸口发闷',1.5],['改稿',1.35],['被看见',1.25],['肩膀紧',1.15],
+        ['睡不着',1.0],['委屈',0.95],['缓过来了',0.9],['按下暂停',0.85]
+      ],
+      bars:[
+        {label:'记录中使用「天气符号」', v:100,  tone:'ok'},
+        {label:'记录含具体身体感受描述', v:62.3, tone:'ok'},
+        {label:'真实改稿 / 冲突中用过「T字暂停」', v:73.5, tone:'ok'}
+      ],
+      mx:{
+        title:'坚持 × 深度 交叉分析（34 人）',
+        cols:['挖到「渴望层」','停留在表层'],
+        rows:[
+          {label:'满 7 天 · 27 人', n:27, high:23, low:4},
+          {label:'3–6 天 · 6 人',  n:6,  high:4,  low:2},
+          {label:'1–2 天 · 1 人',  n:1,  high:0,  low:1}
+        ]
+      },
+      note:'<b>天数多 ≠ 学得好：</b>27 名全勤里有 4 人始终停在表层（每天记，但都在同一层打转）；而未满勤的 7 人里，反倒有 4 人挖到了渴望层。<b>所以本卡不给「坚持天数」排名，把辅导重点从「催打卡」改成「补深度」——对那 4 名全勤但浅表的同学，推送「同伴冰山图谱」范例做二次引导。</b><br><br>'
+        + '<b>为什么不用拍照提交：</b>学生直接对话说出「天气 + 身体 + 冰山一层」，AI 解析文本自动归类，不依赖图像识别；连续 2 天未打卡的学生自动进入「风险预警名单」。<br><br>'
+        + '<b>上面这些数怎么来的：</b>顶部「演示实时」那一条，在平台上就是数据库里的一行打卡记录 —— '
+        + '大模型只负责把学生的话解析成结构化字段，这里的分布、趋势、交叉分析全部由<b>代码节点</b>查询聚合得出，不由 AI 生成。'
+    }
+  },
+
+  /* 思政样本 · 对应脚本 P26 */
+  { key:'worker', label:'调出 AI 工人对话复盘', keys:['工人','老周','复盘','共情','思政'],
+    card:{
+      title:'AI 工人对话复盘', badge:'砺心环节 · 34 人 · 语义分析',
+      vs:[
+        {t:'对话前 · 第一反应', n:'85%', d:'习惯「拿规范压人」或单纯讲道理'},
+        {t:'对话后 · 主动共情', n:'70.6%', d:'能说出「老周可能觉得我看不起他」', b:1}
+      ],
+      note:'<b>素养达成：</b>82.4% 的同学认同「真正的专业素养不是没有情绪，而是在压力中守住内心的晴天」。',
+      noteCls:'ok'
+    }
+  }
+];
+
+/* ══════════════════════════════════════════════════════════
+   引擎
+   ══════════════════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+const msgsEl = $('msgs'), inpEl = $('inp'), sendEl = $('send');
+const quickEl = $('quick');
+const liveEl = $('live'), liveTxtEl = $('liveTxt');
+
+let gen = 0, running = false;
+let timers = [];
+
+function after(ms, fn){
+  const g = gen;
+  timers.push(setTimeout(() => { if (g === gen) fn(); }, ms));
+}
+function clearTimers(){ timers.forEach(clearTimeout); timers = []; }
+
+function el(tag, cls, html){
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (html != null) e.innerHTML = html;
+  return e;
+}
+
+/* 头像：图片加载失败自动退回文字方块（跟学生端同一套写法） */
+function avatar(src, txt, extraCls){
+  const img = document.createElement('img');
+  img.className = 'avatar' + (extraCls ? ' ' + extraCls : '');
+  img.alt = txt;
+  img.src = src;
+  img.onerror = () => img.replaceWith(el('div','avatar' + (extraCls ? ' ' + extraCls : ''), txt));
+  return img;
+}
+
+/* ══════════ 演示实时小条 ══════════
+   读学生端写进 localStorage 的那条打卡记录。
+   ★ localStorage 是「按浏览器」隔离的，不是按服务器：
+     只有【同一台电脑 + 同一个浏览器】开两个标签页时才读得到。
+     手机打卡、电脑大屏看 = 两台设备两个存储区，永远同步不了。 */
+const LIVE_KEY = 'rjx_demo_live';
+
+function readLive(){
+  try{
+    const raw = JSON.parse(localStorage.getItem(LIVE_KEY) || '[]');
+    if (!Array.isArray(raw)) return [];
+    return raw.filter(r => r && typeof r.day === 'number');   // 丢掉结构不完整的旧记录
+  }catch(e){ return []; }
+}
+
+/* 相对时间：看到"昨天"就知道该清了，看到"刚刚"才有说服力 */
+function ago(ts){
+  const s = Math.floor((Date.now() - ts) / 1000);
+  if (s < 60)     return '刚刚';
+  if (s < 3600)   return Math.floor(s / 60) + ' 分钟前';
+  if (s < 86400)  return Math.floor(s / 3600) + ' 小时前';
+  return Math.floor(s / 86400) + ' 天前';
+}
+
+function renderLive(){
+  const a = readLive();
+  if (!a.length){
+    liveEl.classList.remove('on');
+    liveTxtEl.textContent = '等待学生端提交打卡…';
+    return;
+  }
+  const r = a[0];
+  liveEl.classList.add('on');
+  liveTxtEl.innerHTML = '本次演示已收到 <b>' + a.length + '</b> 条 · 最新：<b>第 ' + r.day + ' 天</b>'
+    + ' · ' + (r.bar || '') + ' · ' + (r.weather || '—') + ' · ' + (r.body || '—')
+    + ' <span style="opacity:.7">（' + ago(r.ts) + '）</span>';
+}
+
+renderLive();
+/* 三条路互补，缺一不可：
+   ① 打开页面读一次   —— 覆盖"同一标签页导航过来"
+   ② storage 事件     —— 覆盖"两个窗口并排、都可见"（此时 visibilitychange 不触发）
+   ③ visibilitychange —— 覆盖"切标签回来"，也是 file:// 下唯一可靠的那条 */
+addEventListener('storage', e => { if (e.key === LIVE_KEY || e.key === null) renderLive(); });
+document.addEventListener('visibilitychange', () => { if (!document.hidden) renderLive(); });
+function scrollDown(){ msgsEl.scrollTo({ top: msgsEl.scrollHeight, behavior:'smooth' }); }
+
+/* 数字跳动 */
+function countUp(node, target, dec){
+  const dur = 850, t0 = performance.now();
+  const step = now => {
+    const p = Math.min(1, (now - t0) / dur);
+    const e = 1 - Math.pow(1 - p, 3);
+    node.textContent = (target * e).toFixed(dec);
+    if (p < 1) requestAnimationFrame(step);
+  };
+  requestAnimationFrame(step);
+}
+
+/* ── 渲染数据卡 ── */
+function renderCard(spec){
+  const g = gen;
+  const card = el('div','card');
+  const h = el('div','card-h');
+  h.appendChild(el('div','t', spec.title));
+  if (spec.badge) h.appendChild(el('div','b', spec.badge));
+  card.appendChild(h);
+
+  const b = el('div','card-b');
+
+  if (spec.kpis){
+    const wrap = el('div','kpis');
+    spec.kpis.forEach(k => {
+      const box = el('div','kpi');
+      const n = el('div','n','');
+      n.appendChild(el('span','', '0'));
+      if (k.u) n.appendChild(el('small','', k.u));
+      box.appendChild(n);
+      box.appendChild(el('div','l', k.label));
+      wrap.appendChild(box);
+      setTimeout(() => {
+        if (g !== gen) return;
+        countUp(n.firstChild, k.v, k.dec);
+      }, 120);
+    });
+    b.appendChild(wrap);
+  }
+
+  if (spec.cloud){
+    const c = el('div','cloud');
+    spec.cloud.forEach(w => {
+      const s = el('span','', w[0]);
+      s.style.fontSize = (15 * w[1]).toFixed(1) + 'px';
+      s.style.opacity = Math.min(1, 0.55 + w[1] * 0.32).toFixed(2);
+      c.appendChild(s);
+    });
+    b.appendChild(c);
+  }
+
+  if (spec.bars && spec.bars.length){
+    const wrap = el('div','bars');
+    wrap.style.marginTop = spec.kpis || spec.cloud ? '16px' : '0';
+    spec.bars.forEach(bd => {
+      const row = el('div','bar');
+      row.appendChild(el('div','lb', bd.label));
+      const tr = el('div','track');
+      const fl = el('div','fill' + (bd.tone ? ' ' + bd.tone : ''));
+      tr.appendChild(fl);
+      row.appendChild(tr);
+      row.appendChild(el('div','val', bd.v + '%'));
+      wrap.appendChild(row);
+      setTimeout(() => { if (g === gen) fl.style.width = bd.v + '%'; }, 140);
+    });
+    b.appendChild(wrap);
+  }
+
+  if (spec.cmps){
+    const wrap = el('div','cmps');
+    spec.cmps.forEach(c => {
+      const row = el('div','cmp');
+      row.appendChild(el('div','lb', c.label));
+      row.appendChild(el('div','from', c.from));
+      row.appendChild(el('div','arw','→'));
+      row.appendChild(el('div','to', c.to));
+      wrap.appendChild(row);
+    });
+    b.appendChild(wrap);
+  }
+
+  if (spec.vs){
+    const wrap = el('div','vs');
+    spec.vs.forEach(v => {
+      const s = el('div','side' + (v.b ? ' b' : ''));
+      s.appendChild(el('div','t', v.t));
+      s.appendChild(el('div','n', v.n));
+      s.appendChild(el('div','d', v.d));
+      wrap.appendChild(s);
+    });
+    b.appendChild(wrap);
+  }
+
+  if (spec.tags){
+    const wrap = el('div','tags');
+    wrap.style.marginTop = spec.kpis ? '16px' : '0';
+    spec.tags.forEach(t => wrap.appendChild(el('div','tag2' + (t[1] ? '' : ' g'), t[0])));
+    b.appendChild(wrap);
+  }
+
+  if (spec.list){
+    const wrap = el('div','list');
+    spec.list.forEach(it => {
+      const row = el('div','it');
+      row.appendChild(el('div','bdg ' + it.lvl, it.lvl === 'high' ? '高' : it.lvl === 'mid' ? '中' : '关注'));
+      row.appendChild(el('div','who', it.who));
+      row.appendChild(el('div','why', it.why));
+      row.appendChild(el('div','act', it.act));
+      wrap.appendChild(row);
+    });
+    b.appendChild(wrap);
+  }
+
+  /* 完成天数分布 */
+  if (spec.dist){
+    const wrap = el('div','dist');
+    wrap.style.marginTop = '18px';
+    if (spec.dist.title) wrap.appendChild(el('div','sub', spec.dist.title));
+    spec.dist.rows.forEach(r => {
+      const row = el('div','drow');
+      row.appendChild(el('div','lb', r.label));
+      const tr = el('div','track');
+      const fl = el('div','fill');
+      tr.appendChild(fl);
+      row.appendChild(tr);
+      row.appendChild(el('div','val', r.n + ' 人 · ' + r.p + '%'));
+      wrap.appendChild(row);
+      setTimeout(() => { if (g === gen) fl.style.width = r.p + '%'; }, 170);
+    });
+    b.appendChild(wrap);
+  }
+
+  /* 七日情绪天气变化 */
+  if (spec.trend){
+    const wrap = el('div','trend');
+    wrap.style.marginTop = '18px';
+    if (spec.trend.title) wrap.appendChild(el('div','sub', spec.trend.title));
+    const row = el('div','trow');
+    spec.trend.days.forEach(d => {
+      const c = el('div','tcol');
+      c.appendChild(el('div','em2', d[1]));
+      c.appendChild(el('div','tt', d[2]));
+      c.appendChild(el('div','td', d[0]));
+      row.appendChild(c);
+    });
+    wrap.appendChild(row);
+    if (spec.trend.note) wrap.appendChild(el('div','tnote', spec.trend.note));
+    b.appendChild(wrap);
+  }
+
+  /* 学生原话 */
+  if (spec.quotes){
+    const wrap = el('div','quotes');
+    wrap.style.marginTop = '18px';
+    spec.quotes.forEach(q => {
+      const qq = el('div','quote');
+      qq.appendChild(el('div','qt', q[0]));
+      qq.appendChild(el('div','qw', q[1]));
+      wrap.appendChild(qq);
+    });
+    b.appendChild(wrap);
+  }
+
+  if (spec.mx){
+    const m = spec.mx;
+    const wrap = el('div','mx');
+    wrap.style.marginTop = '18px';
+    if (m.title) wrap.appendChild(el('div','sub', m.title));
+
+    const hd = el('div','mxrow mxhd');
+    hd.appendChild(el('div','mxh',''));
+    m.cols.forEach(c => hd.appendChild(el('div','mxc','<em>' + c + '</em>')));
+    wrap.appendChild(hd);
+
+    m.rows.forEach(r => {
+      const row = el('div','mxrow');
+      row.appendChild(el('div','mxh', r.label));
+      [['hi', r.high], ['lo', r.low]].forEach(p => {
+        const pct = r.n ? Math.round(p[1] / r.n * 1000) / 10 : 0;
+        row.appendChild(el('div','mxc ' + p[0],
+          '<b>' + p[1] + '</b><em>' + pct + '%</em>'));
+      });
+      wrap.appendChild(row);
+    });
+    b.appendChild(wrap);
+  }
+
+  if (spec.note){
+    const n = el('div','note' + (spec.noteCls ? ' ' + spec.noteCls : ''), spec.note);
+    if (spec.bars || spec.cmps || spec.vs || spec.tags || spec.list
+        || spec.dist || spec.trend || spec.quotes || spec.cloud || spec.mx) n.style.marginTop = '16px';
+    b.appendChild(n);
+  }
+
+  card.appendChild(b);
+  return card;
+}
+
+/* ── 追加一条指令 + 回复 ── */
+function pushCmd(text, spec){
+  const row1 = el('div','mrow cmd');
+  row1.appendChild(el('div','avatar av-me','师'));
+  const w1 = el('div','mwrap');
+  w1.appendChild(el('div','sname','教师'));
+  w1.appendChild(el('div','bubble', text));
+  row1.appendChild(w1);
+  msgsEl.appendChild(row1);
+  scrollDown();
+
+  after(520, () => {
+    const row2 = el('div','mrow ai');
+    row2.appendChild(avatar('avatar-dao.png','导'));
+    const w2 = el('div','mwrap');
+    w2.appendChild(el('div','sname','韧行导航台'));
+    w2.appendChild(renderCard(spec));
+    row2.appendChild(w2);
+    msgsEl.appendChild(row2);
+    scrollDown();
+  });
+}
+
+/* ── 快捷指令 ── */
+function buildQuick(){
+  quickEl.innerHTML = '';
+  CMDS.forEach((c, i) => {
+    const btn = el('button','chip', c.label);
+    btn.dataset.i = i;
+    quickEl.appendChild(btn);
+  });
+}
+
+quickEl.addEventListener('click', e => {
+  const b = e.target.closest('.chip');
+  if (!b) return;
+  const i = +b.dataset.i;
+  if (b.classList.contains('used')) return;
+  b.classList.add('used');
+  pushCmd(CMDS[i].label, CMDS[i].card);
+});
+
+/* ── 自由输入：关键词匹配 ── */
+function onSend(){
+  const v = inpEl.value.trim();
+  if (!v) return;
+  inpEl.value = '';
+  const hit = CMDS.find(c => c.keys.some(k => v.includes(k)) || v.includes(c.label));
+  if (hit){
+    const chip = [...quickEl.children].find(x => x.textContent === hit.label);
+    if (chip) chip.classList.add('used');
+    pushCmd(v, hit.card);
+  } else {
+    pushCmd(v, {
+      title:'可以这样问我', badge:'韧行导航台 · 教师端',
+      tags:[['生成本班情绪画像',1],['查看冰山探索深度',1],['调出躯体地图聚类',1],
+            ['查看关键指标达成',1],['查看风险预警名单',1],['查看七日打卡数据',1],
+            ['调出 AI 工人对话复盘',1]]
+    });
+  }
+}
+
+/* ── 全部展开 / 重播（幂等） ──
+   clearLive 必须是可选的：这个函数在页面加载时也会被调用（见文件末尾），
+   如果无条件清空，教师端一打开就把学生端的记录擦掉了，小条永远等不到数据。 */
+function replay(clearLive){
+  gen++; clearTimers(); running = false;
+  msgsEl.innerHTML = '';
+  inpEl.value = '';
+  buildQuick();
+  if (clearLive){
+    /* 彩排的记录会一直留在浏览器里，正式演示时小条上会是昨天随手打的字。
+       上台前点一下「↺ 重播」＝一键清干净。 */
+    try{ localStorage.removeItem(LIVE_KEY); }catch(e){}
+    renderLive();
+  }
+}
+
+function expandAll(){
+  replay();
+  running = true;
+  const step = i => {
+    if (!running) return;
+    if (i >= CMDS.length){ running = false; return; }
+    const chip = quickEl.children[i];
+    if (chip) chip.classList.add('used');
+    pushCmd(CMDS[i].label, CMDS[i].card);
+    after(2100, () => step(i + 1));
+  };
+  step(0);
+}
+
+$('btnAll').onclick    = expandAll;
+$('btnReplay').onclick = () => replay(true);   // 只有用户主动点才清实时记录
+/* 手动布局开关（兜底）：万一自动判定不对，点一下切过去并锁定 */
+sendEl.onclick         = onSend;
+inpEl.addEventListener('keydown', e => { if (e.key === 'Enter') onSend(); });
+
+replay();
+</script>
+</body>
+</html>
